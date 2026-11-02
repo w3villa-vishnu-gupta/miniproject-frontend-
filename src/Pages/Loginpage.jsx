@@ -87,7 +87,7 @@ export default function Loginpage() {
   }
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:8001/auth/google/login'
+    window.location.href = getApiUrl('/auth/google/login')
   }
 
   return (
