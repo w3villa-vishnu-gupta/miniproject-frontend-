@@ -14,7 +14,6 @@ export default function Createaccount() {
   const [errorMessage, setErrorMessage] = useState('')
   const [isSent, setIsSent] = useState(false)
   const [sentEmail, setSentEmail] = useState('')
-  const [magicLink, setMagicLink] = useState('')
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -36,7 +35,6 @@ export default function Createaccount() {
       })
 
       setSentEmail(formData.email.trim())
-      setMagicLink(response.magic_link || '')
       setIsSent(true)
     } catch (error) {
       console.error('Magic link request failed:', error)
@@ -89,20 +87,6 @@ export default function Createaccount() {
               <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
                 Click the magic link in your email to instantly verify your details and activate your workspace.
               </p>
-
-              {magicLink && (
-                <div className="mb-6 p-3 rounded-xl border border-white/10 bg-white/5 text-left">
-                  <p className="text-[11px] text-neutral-400 mb-1.5 font-medium">
-                    Testing locally or didn&apos;t get email?
-                  </p>
-                  <a
-                    href={magicLink}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#d5f477] hover:underline break-all"
-                  >
-                    Click here to complete verification directly &rarr;
-                  </a>
-                </div>
-              )}
 
               <div className="flex flex-col gap-2.5">
                 <button
