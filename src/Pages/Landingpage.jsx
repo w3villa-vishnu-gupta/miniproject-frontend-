@@ -21,6 +21,7 @@ export default function LandingPage() {
           <button onClick={() => navigate('/pricing')} className="hover:text-white transition cursor-pointer">Pricing</button>
           <a href="#about" className="hover:text-white transition">About</a>
           <a href="#contact" className="hover:text-white transition">Contact</a>
+          <button onClick={() => navigate("/release-notes")} className="hover:text-white transition cursor-pointer">Release notes</button>
         </div>
 
         <button onClick={() => navigate('/login')} className="rounded-full border border-white/15 px-5 py-2.5 text-sm hover:bg-white hover:text-black transition">
@@ -128,7 +129,7 @@ export default function LandingPage() {
 
       <footer className="shrink-0 border-t border-white/[0.07] px-6 md:px-14 py-5 flex justify-between items-center text-[11px] text-[#696f76]">
         <span>© 2026 LibraryHub</span>
-        <span>Thoughtfully built for libraries.</span>
+        <a href="/release-notes" className="transition hover:text-white">Release notes ↗</a>
       </footer>
     </main>
   );
