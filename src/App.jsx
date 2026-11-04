@@ -15,6 +15,7 @@ import AgentPage from './Pages/admin/AgentPage'
 import ProfilePage from './Pages/admin/ProfilePage'
 import SettingsPage from './Pages/admin/SettingsPage'
 import Pricingpage from './Pages/Pricingpage'
+import ReleaseNotesPage from './Pages/ReleaseNotesPage'
 import MagicCallback from './Pages/MagicCallback.jsx'
 import Protectedroute from './Pages/Protectedroute.jsx'
 import { api } from './Services/api.js'
@@ -84,6 +85,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/pricing" element={<Pricingpage />} />
+      <Route path="/release-notes" element={<ReleaseNotesPage />} />
       <Route path="/auth/magic-callback" element={<MagicCallback />} />
 
       <Route element={<PublicRoute />}>
