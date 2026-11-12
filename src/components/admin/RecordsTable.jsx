@@ -27,6 +27,7 @@ export default function RecordsTable({
   books = [],
   assignments = [],
   loading,
+  disableClientSearch = false,
   onEditStudent,
   onDeleteStudent,
   onAssignStudent,
@@ -37,7 +38,7 @@ export default function RecordsTable({
   onDeleteAssignment,
 }) {
   const isBooks = activeSection === 'books'
-  const isAssignments = activeSection === 'assignments' || activeSection === 'book-issues'
+  const isAssignments = activeSection === 'book-issues' || activeSection === 'assignments'
   const records = isBooks
     ? books
     : isAssignments
@@ -49,13 +50,14 @@ export default function RecordsTable({
           : students
 
   const filteredRecords = useMemo(() => {
+    if (disableClientSearch) return records
     const query = search.trim().toLowerCase()
     if (!query) return records
 
     return records.filter((record) =>
       Object.values(record).some((value) => String(value).toLowerCase().includes(query)),
     )
-  }, [records, search])
+  }, [records, search, disableClientSearch])
 
   return (
     <div className="overflow-x-auto">
