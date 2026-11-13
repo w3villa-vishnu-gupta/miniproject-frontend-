@@ -5,6 +5,8 @@ import {
   Building2,
   Camera,
   ExternalLink,
+  FileSpreadsheet,
+  FileText,
   Loader2,
   MapPin,
   Pencil,
@@ -301,6 +303,212 @@ export default function ProfilePanel() {
     }
   }
 
+  // PDF & CSV Export state and handlers
+  const [exportingPdf, setExportingPdf] = useState(false)
+
+  function handleDownloadCSV() {
+    try {
+      const now = new Date()
+      const timestamp = now.toLocaleString()
+      const filenameDate = now.toISOString().split('T')[0]
+
+      const escapeCsv = (val) => {
+        if (val === null || val === undefined) return '""'
+        const str = String(val).replace(/"/g, '""')
+        return `"${str}"`
+      }
+
+      const rows = [
+        ['Category', 'Field', 'Value'],
+        ['Owner Profile', 'Full Name', owner?.name || 'Library Owner'],
+        ['Owner Profile', 'Email Address', owner?.email || '—'],
+        ['Owner Profile', 'Phone Number', owner?.phone || '—'],
+        ['Owner Profile', 'Nationality', 'Indian'],
+        ['Owner Profile', 'Address', owner?.address || owner?.userlocation || activeLibrary?.address || '—'],
+        ['Owner Profile', 'Account Status', 'Verified Owner'],
+        ['Owner Profile', 'Subscription Plan', subscriptionPlan],
+        ['Owner Profile', 'Total Managed Libraries', totalLibrariesCount],
+        ['Owner Profile', 'Report Export Date', timestamp],
+        ['', '', ''],
+        ['Managed Libraries', 'Library Name', 'Address', 'Status'],
+      ]
+
+      if (libraries.length > 0) {
+        libraries.forEach((lib) => {
+          const isCurrent = String(lib.id) === String(libraryId)
+          rows.push([
+            'Managed Libraries',
+            lib.name || 'Unnamed Library',
+            lib.address || 'Address not specified',
+            isCurrent ? 'Current Active Workspace' : 'Active',
+          ])
+        })
+      } else {
+        rows.push([
+          'Managed Libraries',
+          activeLibrary?.name || 'Current Library',
+          activeLibrary?.address || '—',
+          'Current Active Workspace',
+        ])
+      }
+
+      const csvContent = '\uFEFF' + rows.map((r) => r.map(escapeCsv).join(',')).join('\r\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `LibraryHub_Profile_${filenameDate}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setSuccessMsg('Profile downloaded in CSV format!')
+      setTimeout(() => setSuccessMsg(''), 3500)
+    } catch (err) {
+      console.error('Failed to export CSV:', err)
+      setError('Failed to generate CSV export.')
+    }
+  }
+
+  async function handleDownloadPDF() {
+    try {
+      setExportingPdf(true)
+      setError('')
+
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({ format: 'a4', unit: 'mm' })
+      const now = new Date()
+      const dateStr = now.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+      const filenameDate = now.toISOString().split('T')[0]
+
+      // Dark Banner Header
+      doc.setFillColor(20, 22, 27)
+      doc.rect(0, 0, 210, 32, 'F')
+
+      // Brand Logo / Accent text
+      doc.setTextColor(213, 244, 119) // #d5f477
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(16)
+      doc.text('LIBRARYHUB', 15, 14)
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Owner Profile & Workspace Summary', 15, 22)
+
+      doc.setTextColor(170, 175, 185)
+      doc.setFontSize(8)
+      doc.text(`Generated: ${dateStr}`, 155, 22)
+
+      // Section 1: Personal & Account Details
+      let y = 43
+      doc.setTextColor(30, 35, 45)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.text('1. Personal & Account Details', 15, y)
+      y += 6
+
+      const profileDetails = [
+        ['Full Name', owner?.name || 'Library Owner'],
+        ['Email Address', owner?.email || '—'],
+        ['Phone Number', owner?.phone || '—'],
+        ['Nationality', 'Indian'],
+        ['Address', owner?.address || owner?.userlocation || activeLibrary?.address || 'Location not specified'],
+        ['Account Status', 'Verified Owner'],
+        ['Subscription Plan', subscriptionPlan],
+        ['Total Libraries', `${totalLibrariesCount} ${totalLibrariesCount === 1 ? 'Library' : 'Libraries'}`],
+      ]
+
+      profileDetails.forEach(([label, value], i) => {
+        if (i % 2 === 0) {
+          doc.setFillColor(247, 248, 250)
+          doc.rect(15, y - 4, 180, 7.5, 'F')
+        }
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        doc.setTextColor(90, 95, 105)
+        doc.text(label, 18, y + 1)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(25, 30, 38)
+        const maxLen = 65
+        const displayVal = String(value).length > maxLen ? String(value).slice(0, maxLen - 3) + '...' : String(value)
+        doc.text(displayVal, 75, y + 1)
+        y += 7.5
+      })
+
+      // Section 2: Managed Libraries
+      y += 8
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.setTextColor(30, 35, 45)
+      doc.text('2. Managed Libraries', 15, y)
+      y += 6
+
+      // Table Header
+      doc.setFillColor(232, 236, 242)
+      doc.rect(15, y - 4, 180, 7.5, 'F')
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(70, 75, 85)
+      doc.text('Library Name', 18, y + 1)
+      doc.text('Address / Location', 85, y + 1)
+      doc.text('Workspace Status', 155, y + 1)
+      y += 8
+
+      const libItems = libraries.length > 0 ? libraries : [activeLibrary || { name: 'Main Library', address: '—' }]
+
+      libItems.slice(0, 10).forEach((lib, i) => {
+        const isCurrent = String(lib?.id) === String(libraryId)
+        if (i % 2 === 1) {
+          doc.setFillColor(247, 248, 250)
+          doc.rect(15, y - 4, 180, 7.5, 'F')
+        }
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(25, 30, 38)
+
+        const libName = String(lib?.name || 'Unnamed Library').slice(0, 35)
+        const libAddr = String(lib?.address || 'Address not specified').slice(0, 38)
+
+        doc.text(libName, 18, y + 1)
+        doc.text(libAddr, 85, y + 1)
+
+        if (isCurrent) {
+          doc.setTextColor(22, 163, 74)
+          doc.setFont('helvetica', 'bold')
+          doc.text('Current Active', 155, y + 1)
+        } else {
+          doc.setTextColor(100, 105, 115)
+          doc.text('Active', 155, y + 1)
+        }
+        y += 7.5
+      })
+
+      // Footer
+      doc.setDrawColor(220, 225, 230)
+      doc.line(15, 278, 195, 278)
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(140, 145, 155)
+      doc.text('LibraryHub Management System — Confidential Profile Report', 15, 283)
+      doc.text('Page 1 of 1', 178, 283)
+
+      doc.save(`LibraryHub_Profile_${filenameDate}.pdf`)
+      setSuccessMsg('Profile downloaded in PDF format!')
+      setTimeout(() => setSuccessMsg(''), 3500)
+    } catch (err) {
+      console.error('Failed to export PDF:', err)
+      setError(err.message || 'Failed to generate PDF export.')
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
   // Dummy fallback avatar
   const defaultPhotoUrl =
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
@@ -422,20 +630,41 @@ export default function ProfilePanel() {
 
       {/* Personal Details Card (Pixel-accurate to Reference Image with subtle dashed rows) */}
       <section className="rounded-2xl p-5 border border-white/[0.08] bg-[#121418] shadow-[0_4px_24px_rgba(0,0,0,0.35)] overflow-hidden">
-        <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/[0.08] px-6 py-4">
           <h2 className="text-sm font-semibold tracking-wide text-neutral-300">Personal details</h2>
-          {!isEditing ? (
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={handleStartEdit}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              onClick={handleDownloadPDF}
+              disabled={exportingPdf}
+              title="Download Profile as PDF document"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition cursor-pointer disabled:opacity-50"
             >
-              <Pencil size={12} />
-              <span>Edit info</span>
+              <FileText size={13} />
+              <span>{exportingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
             </button>
-          ) : (
-            <span className="text-xs text-[#d5f477] font-medium">Editing mode</span>
-          )}
+            <button
+              type="button"
+              onClick={handleDownloadCSV}
+              title="Download Profile as CSV spreadsheet"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200 transition cursor-pointer"
+            >
+              <FileSpreadsheet size={13} />
+              <span>Download CSV</span>
+            </button>
+            {!isEditing ? (
+              <button
+                type="button"
+                onClick={handleStartEdit}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-neutral-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <Pencil size={12} />
+                <span>Edit info</span>
+              </button>
+            ) : (
+              <span className="text-xs text-[#d5f477] font-medium">Editing mode</span>
+            )}
+          </div>
         </div>
 
         {isEditing ? (
